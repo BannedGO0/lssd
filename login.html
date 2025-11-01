@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="cs"><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Přihlášení — LSSD Intranet v6</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="stylesheet" href="styles.css?v=v6"></head>
+<body class="intranet public">
+<header class="public-top"><div class="brand">LSSD Intranet</div></header>
+<main class="public-main">
+  <form id="loginForm" class="card form" novalidate>
+    <h2>Přihlášení</h2>
+    <label>Uživatelské jméno<input id="username" autocomplete="username" required></label>
+    <label>Heslo<input id="password" type="password" autocomplete="current-password" required></label>
+    <div class="actions"><button class="btn primary" id="loginBtn" type="submit">Přihlásit</button><button id="resetBtn" class="btn" type="button">Vyčistit a obnovit data</button></div>
+    <p id="error" class="error"></p>
+    <p class="muted tiny">Po resetu můžeš použít: <b>lssd-admin</b>/<b>Admin-1234</b> · <b>sgt-a</b>/<b>Sergeant-1234</b> · <b>deputy1</b>/<b>Deputy-1234</b></p>
+  </form>
+</main>
+<footer class="foot">&copy; <span id="year2"></span> LSSD</footer>
+
+<script>
+const LS_USERS='lssd_users_v6', LS_SESSION='lssd_session_v6', LS_ROLES='lssd_roles_v6', LS_DAILY='lssd_daily_v6', LS_CPZ='lssd_cpz_v6', LS_EQUIP='lssd_equip_v6', LS_LOGS='lssd_logs_v6';
+const RANKS=[['deputy_trainee','Deputy Trainee'],['deputy_sheriff','Deputy Sheriff'],['deputy_sheriff_bonus_i','Deputy Sheriff Bonus I'],['deputy_sheriff_bonus_ii','Deputy Sheriff Bonus II'],['senior_deputy_master_fto','Senior Deputy Master FTO'],['sergeant','Sergeant'],['lieutenant','Lieutenant'],['captain','Captain'],['commander','Commander'],['division_chief','Division Chief'],['assistant_sheriff','Assistant Sheriff'],['undersheriff','Undersheriff'],['sheriff','Sheriff'],['admin','Admin']];
+const APPROVAL_CHAIN=['sergeant','lieutenant','captain','commander','division_chief','assistant_sheriff','undersheriff','sheriff'];
+const DEFAULT_ROLES=(()=>{const o={};RANKS.forEach(([k,l])=>o[k]={label:l,perms:{review_chain:['sergeant','lieutenant','captain','commander','division_chief','assistant_sheriff','undersheriff','sheriff'].includes(k),users:['sheriff','undersheriff','assistant_sheriff','division_chief','commander','captain','admin'].includes(k)}});return o})(); 
+const DEFAULT_USERS=[
+  {username:'lssd-admin',password:'Admin-1234',role:'admin',shift:'A',fullName:'Admin User'},
+  {username:'sgt-a',password:'Sergeant-1234',role:'sergeant',shift:'A',fullName:'John Doe'},
+  {username:'lt-a',password:'Lieutenant-1234',role:'lieutenant',shift:'A',fullName:'Jane Smith'},
+  {username:'cpt-a',password:'Captain-1234',role:'captain',shift:'A',fullName:'Alex Johnson'},
+  {username:'deputy1',password:'Deputy-1234',role:'deputy_sheriff',shift:'A',fullName:'Chris Brown'}
+];
+function okLS(){try{localStorage.setItem('__t','1');localStorage.removeItem('__t');return true}catch(_){return false}}
+function P(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch(_){return null}} function S(k,v){localStorage.setItem(k,JSON.stringify(v))}
+function seed(force=false){ if(!okLS()){ alert('LocalStorage je blokované – povol ho prosím.'); return } if(force||!P(LS_ROLES))S(LS_ROLES,DEFAULT_ROLES); if(force||!P(LS_USERS))S(LS_USERS,DEFAULT_USERS); if(force||!P(LS_DAILY))S(LS_DAILY,[]); if(force||!P(LS_CPZ))S(LS_CPZ,[]); if(force||!P(LS_EQUIP))S(LS_EQUIP,{}); if(force||!P(LS_LOGS))S(LS_LOGS,[]) }
+function users(){return P(LS_USERS)||[]} function log(u,a,e,d){const L=P(LS_LOGS)||[];L.push({ts:new Date().toISOString(),user:u||'—',action:a,entity:e,detail:d});S(LS_LOGS,L)}
+function doLogin(user,pass){const u=users().find(x=>x.username===user && x.password===pass); if(!u) throw new Error('Neplatné přihlášení'); S(LS_SESSION,{username:u.username,role:u.role,shift:u.shift,fullName:u.fullName}); log(u.username,'login','auth','—'); return u }
+function resetAll(){[LS_USERS,LS_SESSION,LS_DAILY,LS_CPZ,LS_EQUIP,LS_ROLES,LS_LOGS].forEach(k=>localStorage.removeItem(k)); seed(true)}
+seed(false);
+document.getElementById('year2').textContent=new Date().getFullYear();
+const params=new URLSearchParams(location.search); if(params.get('reset')==='1'){ resetAll(); alert('Obnoveno.'); location.search='' }
+document.getElementById('loginForm').addEventListener('submit',function(e){ e.preventDefault(); const u=document.getElementById('username').value.trim(); const p=document.getElementById('password').value; const err=document.getElementById('error'); err.textContent=''; try{ doLogin(u,p); sessionStorage.setItem('lssd_welcome','1'); location.href='dashboard' }catch(ex){ err.textContent=ex.message } });
+document.getElementById('resetBtn').addEventListener('click',function(){ resetAll(); alert('Výchozí účty obnoveny.'); location.reload() });
+</script>
+<noscript>Pro přihlášení je potřeba JavaScript.</noscript>
+</body></html>

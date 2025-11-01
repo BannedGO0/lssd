@@ -1,0 +1,110 @@
+<!doctype html><html lang="cs"><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Admin — LSSD Intranet v6</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="stylesheet" href="styles.css?v=v6">
+<script defer src="app.js?v=v6"></script>
+<script>
+// v6.2 inline nav bootstrap (runs even if app.js has not yet loaded)
+// Determines visibility of Admin/Sergeant/Review links *before* external JS.
+(function(){
+  try{
+    var sessRaw = localStorage.getItem('lssd_session_v6') || localStorage.getItem('lssd_session_v6_1') || localStorage.getItem('lssd_session_v5_5') || '';
+    var rolesRaw = localStorage.getItem('lssd_roles_v6') || localStorage.getItem('lssd_roles_v6_1') || localStorage.getItem('lssd_roles_v5_5') || '{}';
+    var u = null; try{ u = JSON.parse(sessRaw) }catch(e){}
+    var roles = {}; try{ roles = JSON.parse(rolesRaw)||{} }catch(e){}
+    function has(el){ return !!document.getElementById(el) }
+    function show(id){ var x=document.getElementById(id); if(x){ x.classList.remove('hide') } }
+    if(!u) return;
+    var role = u.role||'';
+    var order=['deputy_trainee','deputy_sheriff','deputy_sheriff_bonus_i','deputy_sheriff_bonus_ii','senior_deputy_master_fto','sergeant','lieutenant','captain','commander','division_chief','assistant_sheriff','undersheriff','sheriff','admin'];
+    var isSgtPlus = order.indexOf(role) >= order.indexOf('sergeant');
+    var isAdminPlus = ['assistant_sheriff','undersheriff','sheriff','admin'].indexOf(role) !== -1;
+    var canReview = false; try{ canReview = !!(roles[role] && roles[role].perms && roles[role].perms.review_chain); }catch(e){}
+    // Admin
+    if(isAdminPlus){ show('adminNav'); show('adminTop'); }
+    // Sergeant Hub
+    if(isSgtPlus){ show('sergeantNav'); show('sergeantTop'); }
+    // Review
+    if(canReview){ show('reviewNav'); }
+  }catch(e){}
+})();
+</script>
+
+
+<script>
+// v6.4 — default LSSD hierarchy (auto-merge into LS_ROLES on Admin load)
+(function(){
+  const KEY='lssd_roles_v6';
+  const order=['deputy_trainee','deputy_sheriff','deputy_sheriff_bonus_i','deputy_sheriff_bonus_ii','senior_deputy_master_fto','sergeant','lieutenant','captain','commander','division_chief','assistant_sheriff','undersheriff','sheriff','admin'];
+  const labels={'deputy_trainee':'Deputy Trainee','deputy_sheriff':'Deputy Sheriff','deputy_sheriff_bonus_i':'Deputy Sheriff Bonus I','deputy_sheriff_bonus_ii':'Deputy Sheriff Bonus II','senior_deputy_master_fto':'Senior Deputy Master FTO','sergeant':'Sergeant','lieutenant':'Lieutenant','captain':'Captain','commander':'Commander','division_chief':'Division Chief','assistant_sheriff':'Assistant Sheriff','undersheriff':'Undersheriff','sheriff':'Sheriff','admin':'Admin'};
+  function perms(k){ return {review_chain: ['sergeant','lieutenant','captain','commander','division_chief','assistant_sheriff','undersheriff','sheriff'].includes(k), users: ['sheriff','undersheriff','assistant_sheriff','division_chief','commander','captain','admin'].includes(k)} }
+  try{
+    let data={}; try{ data=JSON.parse(localStorage.getItem(KEY)||'{}')||{} }catch(_){ data={} }
+    let changed=false;
+    order.forEach(k=>{ if(!data[k]){ data[k]={label:labels[k], perms:perms(k)}; changed=true; } });
+    if(changed){ localStorage.setItem(KEY, JSON.stringify(data)); }
+    // expose to window for app.js ordering
+    window.__LSSD_ORDER = order;
+  }catch(e){}
+})();
+</script>
+
+</head>
+<body class="intranet">
+<header class="topbar">
+  <div class="brand">LSSD Intranet</div>
+  <div class="spacer"></div>
+  <a id="sergeantTop" class="btn hide" href="sergeant-hub">Seržant Hub</a>
+  <a id="adminTop" class="btn hide" href="admin">Admin</a>
+  <a class="logout-link" id="logoutLink" href="login" onclick="try{window.__logout && window.__logout();}catch(e){}">Odhlásit</a>
+</header>
+<div class="wrap"><aside class="sidebar"><nav>
+  <a href="dashboard">Dashboard</a>
+  <a href="report-new">Nový Daily</a>
+  <a href="cpz-new">Nový CPZ</a>
+  <a href="equipment">Výstroj</a>
+  <a id="reviewNav" class="hide" href="review">Schvalování</a>
+  <a id="sergeantNav" class="hide" href="sergeant-hub">Seržant Hub</a>
+  <a id="adminNav" class="hide" href="admin">Admin</a>
+</nav></aside><main class="content">
+<section class="card" data-role-min="assistant_sheriff">
+  <h2>Uživatelé</h2>
+  <div class='actions'><button id='seedDefaultUsers' class='btn' type='button'>Obnovit výchozí účty</button><span id='userMsg' class='muted tiny'></span></div>
+  <p class='muted tiny'>Přístup: Assistant Sheriff a výš (včetně admin). Spravuješ účty všech směn a hodností.</p>
+  <form id="userForm" class="grid two" novalidate>
+    <input type="hidden" id="u_id">
+    <label>Uživatelské jméno<input id="u_name" required minlength="3" placeholder="např. j.novak"></label>
+    <label>Heslo<input id="u_pass" minlength="8" placeholder="nové heslo"></label>
+    <label>Celé jméno<input id="u_full" placeholder="Jméno Příjmení"></label>
+    <label>Hodnost<select id="u_role"></select></label>
+    <label>Směna<select id="u_shift"><option>A</option><option>B</option><option>C</option></select></label>
+    <div class="actions"><button id="saveUser" class="btn primary" type="submit">Vytvořit / Uložit</button><button id="resetUser" class="btn">Zrušit</button></div>
+    <p id="userErr" class="error"></p>
+  </form>
+  <table class="table" id="usersTable"><thead><tr><th>Uživatel</th><th>Jméno</th><th>Hodnost</th><th>Směna</th><th>Akce</th></tr></thead><tbody></tbody></table>
+</section>
+
+<section class="card" data-role-min="assistant_sheriff">
+  <h2>Hodnosti &amp; oprávnění</h2>
+  <div class='actions'><button id='seedDefaultRoles' class='btn' type='button'>Obnovit výchozí hodnosti</button><span id='roleMsg' class='muted tiny'></span></div>
+  <form id="roleForm" class="grid two" novalidate>
+    <input type="hidden" id="r_id">
+    <label>Klíč (interní)<input id="r_key" placeholder="např. deputy_sheriff" required></label>
+    <label>Popisek (zobrazení)<input id="r_label" placeholder="např. Deputy Sheriff" required></label>
+    <div class="full perm-grid">
+      <label class="perm-row"><input type="checkbox" id="p_review_any"> schvalovat v řetězci</label>
+      <label class="perm-row"><input type="checkbox" id="p_users"> správa uživatelů</label>
+    </div>
+    <div class="actions"><button id="saveRole" class="btn primary" type="submit">Vytvořit / Uložit</button><button id="resetRole" class="btn">Zrušit</button></div>
+    <p id="roleErr" class="error"></p>
+  </form>
+  <table class="table" id="rolesTable"><thead><tr><th>Klíč</th><th>Popisek</th><th>Schvalování</th><th>Správa uživatelů</th><th>Akce</th></tr></thead><tbody></tbody></table>
+</section>
+
+<section class="card" data-role-min="assistant_sheriff">
+  <h2>Audit logy</h2>
+  <div class="actions"><button id="exportLogs" class="btn">Export</button><button id="clearLogs" class="btn">Vyčistit</button></div>
+  <table class="table" id="logsTable"><thead><tr><th>Čas</th><th>Uživatel</th><th>Akce</th><th>Objekt</th><th>Detail</th></tr></thead><tbody></tbody></table>
+</section>
+</main></div><footer class='foot'>&copy; <span id='year'></span> LSSD</footer></body></html>

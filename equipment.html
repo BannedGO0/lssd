@@ -1,0 +1,61 @@
+<!doctype html><html lang="cs"><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Výstroj — LSSD Intranet v6</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="stylesheet" href="styles.css?v=v6">
+<script defer src="app.js?v=v6"></script>
+<script>
+// v6.2 inline nav bootstrap (runs even if app.js has not yet loaded)
+// Determines visibility of Admin/Sergeant/Review links *before* external JS.
+(function(){
+  try{
+    var sessRaw = localStorage.getItem('lssd_session_v6') || localStorage.getItem('lssd_session_v6_1') || localStorage.getItem('lssd_session_v5_5') || '';
+    var rolesRaw = localStorage.getItem('lssd_roles_v6') || localStorage.getItem('lssd_roles_v6_1') || localStorage.getItem('lssd_roles_v5_5') || '{}';
+    var u = null; try{ u = JSON.parse(sessRaw) }catch(e){}
+    var roles = {}; try{ roles = JSON.parse(rolesRaw)||{} }catch(e){}
+    function has(el){ return !!document.getElementById(el) }
+    function show(id){ var x=document.getElementById(id); if(x){ x.classList.remove('hide') } }
+    if(!u) return;
+    var role = u.role||'';
+    var order=['deputy_trainee','deputy_sheriff','deputy_sheriff_bonus_i','deputy_sheriff_bonus_ii','senior_deputy_master_fto','sergeant','lieutenant','captain','commander','division_chief','assistant_sheriff','undersheriff','sheriff','admin'];
+    var isSgtPlus = order.indexOf(role) >= order.indexOf('sergeant');
+    var isAdminPlus = ['assistant_sheriff','undersheriff','sheriff','admin'].indexOf(role) !== -1;
+    var canReview = false; try{ canReview = !!(roles[role] && roles[role].perms && roles[role].perms.review_chain); }catch(e){}
+    // Admin
+    if(isAdminPlus){ show('adminNav'); show('adminTop'); }
+    // Sergeant Hub
+    if(isSgtPlus){ show('sergeantNav'); show('sergeantTop'); }
+    // Review
+    if(canReview){ show('reviewNav'); }
+  }catch(e){}
+})();
+</script>
+
+</head>
+<body class="intranet">
+<header class="topbar">
+  <div class="brand">LSSD Intranet</div>
+  <div class="spacer"></div>
+  <a id="sergeantTop" class="btn hide" href="sergeant-hub">Seržant Hub</a>
+  <a id="adminTop" class="btn hide" href="admin">Admin</a>
+  <a class="logout-link" id="logoutLink" href="login" onclick="try{window.__logout && window.__logout();}catch(e){}">Odhlásit</a>
+</header>
+<div class="wrap"><aside class="sidebar"><nav>
+  <a href="dashboard">Dashboard</a>
+  <a href="report-new">Nový Daily</a>
+  <a href="cpz-new">Nový CPZ</a>
+  <a href="equipment">Výstroj</a>
+  <a id="reviewNav" class="hide" href="review">Schvalování</a>
+  <a id="sergeantNav" class="hide" href="sergeant-hub">Seržant Hub</a>
+  <a id="adminNav" class="hide" href="admin">Admin</a>
+</nav></aside><main class="content">
+<section class="card"><h2>Osobní výstroj</h2>
+  <form id="equipForm" class="grid two" novalidate>
+    <label>Primární zbraň<input id="e_primary"></label>
+    <label>Vedlejší zbraň<input id="e_secondary"></label>
+    <label class="full">Další výbava<input id="e_other"></label>
+    <label>Vozidlo<input id="e_vehicle"></label>
+    <div class="actions"><button class="btn primary" id="saveEquip">Uložit</button><span id="equipMsg" class="muted"></span></div>
+  </form>
+</section>
+</main></div><footer class='foot'>&copy; <span id='year'></span> LSSD</footer></body></html>
